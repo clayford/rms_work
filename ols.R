@@ -22,11 +22,12 @@ summary.lm(f)    # will only work if penalty and penalty.matrix not used
 
 
 # Fit a complex model and approximate it with a simple one
-x1 <- runif(200)
-x2 <- runif(200)
-x3 <- runif(200)
-x4 <- runif(200)
-y <- x1 + x2 + rnorm(200)
+n <- 300
+x1 <- runif(n)
+x2 <- runif(n)
+x3 <- runif(n)
+x4 <- runif(n)
+y <- x1 + x2 + rnorm(n, mean = 0, sd = 1.5)
 f    <- ols(y ~ rcs(x1,4) + x2 + x3 + x4)
 pred <- fitted(f)   # or predict(f) or f$linear.predictors
 f2   <- ols(pred ~ rcs(x1,4) + x2 + x3 + x4, sigma=1)
