@@ -8,23 +8,69 @@ distance <- (x1 + x2/3 + rnorm(200))^2
 d <- datadist(x1,x2)
 options(datadist="d")   # No d -> no summary, plot without giving all details
 
-
+# scored: expand categorical predictor having k numeric levels into linear term
+# and k − 2 dummy variables
 f <- ols(sqrt(distance) ~ rcs(x1,4) + scored(x2), x=TRUE)
-f1 <- ols(sqrt(distance) ~ rcs(x1,quantile(x1, c(min(x), 0.05, 0.35, 0.65, 0.95, max(x)))) + x2, x=TRUE)
-f1
-library(splines)
-f2 <- lm(sqrt(distance) ~ ns(x1, df = 3) + x2)
-f2 <- lm(sqrt(distance) ~ ns(x1, knots = quantile(x1, c(0.05, 0.35, 0.65, 0.95))) + x2)
-summary(f2)
+f
+# summary.lm(f)
+
+# comparing to lm()
+f1 <- lm(sqrt(distance) ~ rcs(x1,4) + scored(x2))
+summary(f1)
+
+anova(f)
+anova(f, indnl = FALSE) # exclude individual tests for non-linearity
+# anova.rms uses Type 2 SS
+# x1, x2 and ERROR lines match those in anova.lm()
+# The REGRESSION line matches F-statistic line in summary.lm()
+car::Anova(f1)
+
+# replicate x1 nonlinear line in anova.rms()
+f1a <- lm(sqrt(distance) ~ x1 + scored(x2))
+anova(f1a, f1)
+
+# replicate x2 nonlinear line in anova.rms()
+f1b <- lm(sqrt(distance) ~ rcs(x1,4) + x2)
+anova(f1b, f1)
+
+# replicate TOTAL nonlinear line in anova.rms()
+f1c <- lm(sqrt(distance) ~ x1 + x2)
+anova(f1c, f1)
+
+
 # could use d <- datadist(f); options(datadist="d") at this point,
 # but predictor summaries would not be stored in the fit object for
 # use with Predict, summary.rms.  In that case, the original
 # dataset or d would need to be accessed later, or all variable values
 # would have to be specified to summary, plot
-anova(f)
-which.influence(f)
+
+which.influence(f, cutoff = 0.3)
+summary(influence.measures(f1)) # base R
+
+# trying to understand summary.rms
 summary(f)
-summary.lm(f)    # will only work if penalty and penalty.matrix not used
+
+# how to get effect
+diff(predict(f, newdata = data.frame(x1 = c(0.2937, 0.74248),
+                                     x2 = c(0, 0))))
+
+predict(f)
+
+# replicating using lm() and emmeans()
+library(emmeans)
+
+# lm() again but with ns()
+f2 <- lm(sqrt(distance) ~ splines::ns(x1,3) + ordered(x2))
+summary(f2)
+f2.rg <- ref_grid(f2,at = list(x1 = c(0.74248355, 0.29369846),
+                                   x2 = 0))
+f2.rg
+contrast(f2.rg, method = "pairwise")
+confint(contrast(f2.rg, method = "pairwise"))
+
+# compare to summary.rms
+summary(f)
+
 
 
 # Fit a complex model and approximate it with a simple one
@@ -65,3 +111,5 @@ coef(m2)
 plot(x,y)
 lines(x, fitted(m1), col = 1)
 lines(x, fitted(m2), col = 2)
+
+
